@@ -4,6 +4,19 @@
 # This script temporarily disables `-e` around intentional failures.
 set -euo pipefail
 
+# I resolve the repo root so I can find the local bin directory reliably.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_BIN="${SCRIPT_DIR}/bin"
+
+# Ensure create_user.sh and delete_user.sh are on PATH, preferring the repo's bin directory.
+if ! command -v delete_user.sh >/dev/null 2>&1 || ! command -v create_user.sh >/dev/null 2>&1; then
+    if [[ -x "${PROJECT_BIN}/delete_user.sh" || -x "${PROJECT_BIN}/create_user.sh" ]]; then
+        PATH="${PROJECT_BIN}:$PATH"
+    elif [[ -d "$HOME/bin" ]]; then
+        PATH="$HOME/bin:$PATH"
+    fi
+fi
+
 echo "Demo: delete_user.sh requirements"
 echo "Detected OS: $(uname -s)"
 echo
@@ -11,7 +24,7 @@ echo
 echo "1) Run script without arguments (should error):"
 # Allow the next command to fail without exiting this demo script.
 set +e
-./delete_user.sh
+delete_user.sh
 status=$?
 # Re-enable \"exit on error\" for the rest of the demo.
 set -e
@@ -26,7 +39,7 @@ if [[ -z "$demo_username" ]]; then
     echo "No username provided. Creating a temporary user to delete: $demo_username"
     echo "You will be prompted for a password to create the user."
     echo
-    ./create_user.sh "$demo_username"
+    create_user.sh "$demo_username"
     echo
 fi
 
@@ -41,7 +54,7 @@ echo "2) Run script with valid arguments (username):"
 echo "   Username: $demo_username"
 echo "   You will be prompted to confirm deletion."
 echo
-./delete_user.sh "$demo_username"
+delete_user.sh "$demo_username"
 echo
 
 echo "3) Attempt to switch to the deleted user (should fail):"

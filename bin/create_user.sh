@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+# I enable strict mode so I notice errors early and avoid partial user setup.
 # Safer bash settings:
 # -e  : exit immediately if a command fails (non-zero status)
 # -u  : treat unset variables as an error

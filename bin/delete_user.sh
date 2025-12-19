@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+# I enable strict mode so a failed delete step doesn't silently continue.
 # Safer bash settings:
 # -e  : exit immediately if a command fails (non-zero status)
 # -u  : treat unset variables as an error

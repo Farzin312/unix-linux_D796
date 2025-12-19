@@ -4,6 +4,19 @@
 # This script temporarily disables `-e` around an intentional failure.
 set -euo pipefail
 
+# I resolve the repo root so I can find the local bin directory reliably.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_BIN="${SCRIPT_DIR}/bin"
+
+# Ensure create_user.sh is on PATH, preferring the repo's bin directory.
+if ! command -v create_user.sh >/dev/null 2>&1; then
+    if [[ -x "${PROJECT_BIN}/create_user.sh" ]]; then
+        PATH="${PROJECT_BIN}:$PATH"
+    elif [[ -d "$HOME/bin" ]]; then
+        PATH="$HOME/bin:$PATH"
+    fi
+fi
+
 echo "Demo: create_user.sh requirements"
 echo "Detected OS: $(uname -s)"
 echo
@@ -11,7 +24,7 @@ echo
 echo "1) Run script without arguments (should error):"
 # Allow the next command to fail without exiting this demo script.
 set +e
-./create_user.sh
+create_user.sh
 status=$?
 # Re-enable "exit on error" for the rest of the demo.
 set -e
@@ -31,7 +44,7 @@ echo "   You will be prompted to enter an initial password."
 echo "   Note: On macOS, the user may not appear in /etc/passwd; create_user.sh also prints dscl/id output."
 echo
 # This will likely prompt for sudo (if you're not root) and then prompt for a password.
-./create_user.sh "$demo_username"
+create_user.sh "$demo_username"
 echo
 
 if [[ "$(uname -s)" == "Darwin" ]]; then
