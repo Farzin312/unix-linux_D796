@@ -7,14 +7,13 @@ set -euo pipefail
 # I resolve the repo root so I can find the local bin directory reliably.
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 HOME_BIN="${HOME}/bin"
-PROJECT_BIN="${SCRIPT_DIR}/bin"
 
 # I ensure create_user.sh and delete_user.sh are on PATH, preferring ~/bin for the assignment setup.
 if ! command -v delete_user.sh >/dev/null 2>&1 || ! command -v create_user.sh >/dev/null 2>&1; then
     if [[ -x "${HOME_BIN}/delete_user.sh" || -x "${HOME_BIN}/create_user.sh" ]]; then
         PATH="${HOME_BIN}:$PATH"
-    elif [[ -x "${PROJECT_BIN}/delete_user.sh" || -x "${PROJECT_BIN}/create_user.sh" ]]; then
-        PATH="${PROJECT_BIN}:$PATH"
+    elif [[ -x "${SCRIPT_DIR}/delete_user.sh" || -x "${SCRIPT_DIR}/create_user.sh" ]]; then
+        PATH="${SCRIPT_DIR}:$PATH"
     fi
 fi
 

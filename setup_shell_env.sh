@@ -10,7 +10,6 @@ err() {
 
 # I use the script location as the project root so file paths are predictable.
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_BIN="${SCRIPT_DIR}/bin"
 BIN_DIR="${HOME}/bin"
 ALIAS_SRC="${SCRIPT_DIR}/bash_aliases"
 ALIAS_DEST="${HOME}/.bash_aliases"
@@ -22,9 +21,7 @@ mkdir -p "$BIN_DIR"
 
 # I copy the user scripts into ~/bin so they are on PATH without removing the project copies.
 for script in create_user.sh delete_user.sh; do
-    if [[ -f "${PROJECT_BIN}/${script}" ]]; then
-        cp "${PROJECT_BIN}/${script}" "${BIN_DIR}/${script}"
-    elif [[ -f "${SCRIPT_DIR}/${script}" ]]; then
+    if [[ -f "${SCRIPT_DIR}/${script}" ]]; then
         cp "${SCRIPT_DIR}/${script}" "${BIN_DIR}/${script}"
     else
         err "Required script not found: $script"
@@ -47,8 +44,10 @@ if ! grep -qF "$BASHRC_MARKER" "$BASHRC"; then
     cat <<EOF >> "$BASHRC"
 
 $BASHRC_MARKER
-# I set a colored $ prompt and reset colors so my input text is different.
-export PS1="\\[\\e[1;32m\\]$\\[\\e[0m\\] "
+# I set a colored $ prompt and set my input text to a different color.
+export PS1="\\[\\e[1;32m\\]$\\[\\e[0;36m\\] "
+# I reset colors before command output so only the prompt/input are colored.
+export PS0="\\[\\e[0m\\]"
 # I keep aliases in a separate file so I can edit them without touching .bashrc.
 if [[ -f "\$HOME/.bash_aliases" ]]; then
   . "\$HOME/.bash_aliases"
@@ -102,6 +101,9 @@ alias clr
 alias cddesktop
 alias cddownload
 alias cddocuments
+alias desktop
+alias download
+alias documents
 alias cddownloads
 echo
 

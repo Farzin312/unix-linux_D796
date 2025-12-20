@@ -1,0 +1,16 @@
+Submission Notes
+
+I prepared the required shell scripts for tasks A-G (excluding the flowcharts and recording, which I will submit separately).
+I kept comments in first person and used clear, professional language throughout the scripts.
+
+Scripts
+- create_user.sh and delete_user.sh: user creation/deletion with argument checks, group handling, password assignment, and /etc/passwd verification.
+- demo_create_user.sh and demo_delete_user.sh: executable demos for no-arg runs, valid-arg runs, and user switch verification.
+- setup_shell_env.sh and bash_aliases: prompt customization, PATH update for ~/bin, and required aliases.
+- install_vim.sh and update_packages.sh: package install/update with update.log output.
+- check_google_ping.sh, check_dns_ip.sh, check_dns_lookup.sh: network checks.
+- disk_cleanup.sh: disk space assessment and cleanup.
+- archive_etc.sh: gzip/bzip2 archive creation and size comparison.
+
+Sources
+No external sources were quoted, paraphrased, or summarized for this submission.

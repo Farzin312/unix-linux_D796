@@ -13,5 +13,9 @@ alias clr='clear'
 alias cddesktop='cd ~/Desktop'
 alias cddownload='cd ~/Downloads'
 alias cddocuments='cd ~/Documents'
+# I add plain alias names to match the rubric wording.
+alias desktop='cd ~/Desktop'
+alias download='cd ~/Downloads'
+alias documents='cd ~/Documents'
 # I include pluralized names to match the actual directory names.
 alias cddownloads='cd ~/Downloads'

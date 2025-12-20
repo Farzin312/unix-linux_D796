@@ -21,6 +21,17 @@ require_cmd rm
 root_free_before_kb="$(df -kP / | awk 'NR==2 {print $4}')"
 [[ -n "$root_free_before_kb" ]] || err "Could not read free space for /"
 
+# I choose /root for the post-cleanup check when it exists; otherwise I fall back to /.
+root_partition="/root"
+if [[ ! -d "$root_partition" ]]; then
+    echo "Note: /root does not exist on this system; using / for the /root check."
+    root_partition="/"
+fi
+
+# I capture free space in the /root partition (or fallback) before cleanup.
+root_free_before_root_kb="$(df -kP "$root_partition" | awk 'NR==2 {print $4}')"
+[[ -n "$root_free_before_root_kb" ]] || err "Could not read free space for $root_partition"
+
 # cleanDir deletes the contents of the directory passed as $1.
 cleanDir() {
     local target="$1"
@@ -55,17 +66,11 @@ for dir in "${CLEAN_DIRS[@]}"; do
     cleanDir "$dir"
 done
 
-root_partition="/root"
-if [[ ! -d "$root_partition" ]]; then
-    echo "Note: /root does not exist on this system; using / for the after-check."
-    root_partition="/"
-fi
-
 # I capture free space in the /root partition (or fallback) after cleanup.
-root_free_after_kb="$(df -kP "$root_partition" | awk 'NR==2 {print $4}')"
-[[ -n "$root_free_after_kb" ]] || err "Could not read free space for $root_partition"
+root_free_after_root_kb="$(df -kP "$root_partition" | awk 'NR==2 {print $4}')"
+[[ -n "$root_free_after_root_kb" ]] || err "Could not read free space for $root_partition"
 
-freed_kb=$((root_free_after_kb - root_free_before_kb))
+freed_kb=$((root_free_after_root_kb - root_free_before_root_kb))
 if ((freed_kb > 0)); then
     echo "Freed ${freed_kb} KB of disk space."
 else
