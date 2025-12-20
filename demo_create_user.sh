@@ -6,14 +6,15 @@ set -euo pipefail
 
 # I resolve the repo root so I can find the local bin directory reliably.
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+HOME_BIN="${HOME}/bin"
 PROJECT_BIN="${SCRIPT_DIR}/bin"
 
-# Ensure create_user.sh is on PATH, preferring the repo's bin directory.
+# I ensure create_user.sh is on PATH, preferring ~/bin for the assignment setup.
 if ! command -v create_user.sh >/dev/null 2>&1; then
-    if [[ -x "${PROJECT_BIN}/create_user.sh" ]]; then
+    if [[ -x "${HOME_BIN}/create_user.sh" ]]; then
+        PATH="${HOME_BIN}:$PATH"
+    elif [[ -x "${PROJECT_BIN}/create_user.sh" ]]; then
         PATH="${PROJECT_BIN}:$PATH"
-    elif [[ -d "$HOME/bin" ]]; then
-        PATH="$HOME/bin:$PATH"
     fi
 fi
 
@@ -58,14 +59,21 @@ if [[ "$(uname -s)" == "Darwin" ]]; then
     echo ' - If create_user.sh sets pwpolicy newPasswordRequired=1, Terminal `login`/`su` may reject with "Login incorrect".'
     echo " - To see the forced-change behavior, log out (or use Fast User Switching) and sign in as $demo_username."
 else
-    echo "3) Switch to the new user (uses the password you set) and you should be forced to change it:"
+    echo "3) Switch to the new user (enter the password you set and expect a forced change):"
     echo "   su - $demo_username"
     echo
-    echo "If your system uses sudo instead of su, you can also try:"
-    echo "   sudo -iu $demo_username whoami"
-    echo "   sudo -iu $demo_username id"
-    echo
-    echo "Note: If you open an interactive shell with:"
-    echo "   sudo -iu $demo_username"
-    echo 'type `exit` to return to your original terminal session.'
+    if ! command -v su >/dev/null 2>&1; then
+        echo "Error: su not found; cannot switch users on this system." >&2
+        exit 1
+    fi
+    # I allow this command to fail so the demo can report the result cleanly.
+    set +e
+    su - "$demo_username"
+    status=$?
+    set -e
+    if [[ $status -eq 0 ]]; then
+        echo "Returned to the original shell after switching users."
+    else
+        echo "Switch to ${demo_username} failed. Verify the password and try again."
+    fi
 fi

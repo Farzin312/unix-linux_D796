@@ -8,9 +8,10 @@ err() {
     exit 1
 }
 
-# I use the script location as the project root so file moves are predictable.
+# I use the script location as the project root so file paths are predictable.
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-BIN_DIR="${SCRIPT_DIR}/bin"
+PROJECT_BIN="${SCRIPT_DIR}/bin"
+BIN_DIR="${HOME}/bin"
 ALIAS_SRC="${SCRIPT_DIR}/bash_aliases"
 ALIAS_DEST="${HOME}/.bash_aliases"
 BASHRC="${HOME}/.bashrc"
@@ -19,21 +20,17 @@ BASHRC_MARKER="# Added by setup_shell_env.sh"
 
 mkdir -p "$BIN_DIR"
 
-# Move scripts into the project bin directory if they are still in the repo root.
-if [[ -f "${SCRIPT_DIR}/create_user.sh" ]]; then
-    mv "${SCRIPT_DIR}/create_user.sh" "${BIN_DIR}/"
-fi
-if [[ -f "${SCRIPT_DIR}/delete_user.sh" ]]; then
-    mv "${SCRIPT_DIR}/delete_user.sh" "${BIN_DIR}/"
-fi
-
-# Ensure the scripts remain executable after the move.
-if [[ -f "${BIN_DIR}/create_user.sh" ]]; then
-    chmod +x "${BIN_DIR}/create_user.sh"
-fi
-if [[ -f "${BIN_DIR}/delete_user.sh" ]]; then
-    chmod +x "${BIN_DIR}/delete_user.sh"
-fi
+# I copy the user scripts into ~/bin so they are on PATH without removing the project copies.
+for script in create_user.sh delete_user.sh; do
+    if [[ -f "${PROJECT_BIN}/${script}" ]]; then
+        cp "${PROJECT_BIN}/${script}" "${BIN_DIR}/${script}"
+    elif [[ -f "${SCRIPT_DIR}/${script}" ]]; then
+        cp "${SCRIPT_DIR}/${script}" "${BIN_DIR}/${script}"
+    else
+        err "Required script not found: $script"
+    fi
+    chmod +x "${BIN_DIR}/${script}"
+done
 
 # Install the alias file as a separate file in the home directory.
 if [[ -f "$ALIAS_SRC" ]]; then
@@ -50,14 +47,14 @@ if ! grep -qF "$BASHRC_MARKER" "$BASHRC"; then
     cat <<EOF >> "$BASHRC"
 
 $BASHRC_MARKER
-# I use distinct colors for user, host, and path so the prompt is easy to read.
-export PS1="\\[\\e[1;32m\\]\\u\\[\\e[0m\\]@\\[\\e[1;34m\\]\\h\\[\\e[0m\\]:\\[\\e[1;33m\\]\\w\\[\\e[0m\\] \\[\\e[1;35m\\]bash\\[\\e[0m\\]$ "
+# I set a colored $ prompt and reset colors so my input text is different.
+export PS1="\\[\\e[1;32m\\]$\\[\\e[0m\\] "
 # I keep aliases in a separate file so I can edit them without touching .bashrc.
 if [[ -f "\$HOME/.bash_aliases" ]]; then
   . "\$HOME/.bash_aliases"
 fi
-# I add the project bin so create_user.sh and delete_user.sh run from any directory.
-export PATH="${BIN_DIR}:\$PATH"
+# I add ~/bin so create_user.sh and delete_user.sh run from any directory.
+export PATH="\$HOME/bin:\$PATH"
 EOF
 fi
 
@@ -99,9 +96,13 @@ echo "Verification: aliases from $ALIAS_DEST"
 alias lrt
 alias la
 alias cls
+alias lslrt
+alias lsa
+alias clr
 alias cddesktop
 alias cddownload
 alias cddocuments
+alias cddownloads
 echo
 
 echo "Verification: PATH includes $BIN_DIR"
