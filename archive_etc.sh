@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 
-# I use strict mode so archive creation stops on the first failure.
 set -euo pipefail
 
 err() {
@@ -12,14 +11,12 @@ require_cmd() {
     command -v "$1" >/dev/null 2>&1 || err "Required command not found: $1"
 }
 
-# I re-run with sudo if needed because /etc may require elevated permissions.
 ensure_root_or_sudo() {
     if [[ "${EUID}" -ne 0 ]]; then
         exec sudo -- "$0" "$@"
     fi
 }
 
-# fileSize prints the size of a file in bytes.
 fileSize() {
     local file="$1"
     [[ -f "$file" ]] || err "File not found: $file"
@@ -42,7 +39,6 @@ timestamp="$(date +%Y%m%d_%H%M%S)"
 gzip_archive="etc_backup_${timestamp}.tar.gz"
 bzip_archive="etc_backup_${timestamp}.tar.bz2"
 
-# I archive /etc twice so I can compare gzip vs bzip2 sizes.
 tar -czf "$gzip_archive" /etc
 tar -cjf "$bzip_archive" /etc
 

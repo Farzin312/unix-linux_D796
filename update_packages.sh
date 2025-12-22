@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 
-# I use strict mode so a failed update stops and the log reflects it.
 set -euo pipefail
 
 err() {
@@ -15,7 +14,6 @@ fi
 LOG_FILE="update.log"
 pkg_manager=""
 
-# I detect the package manager first so I can run the right update command.
 if command -v apt-get >/dev/null 2>&1; then
     pkg_manager="apt-get"
 elif command -v dnf >/dev/null 2>&1; then

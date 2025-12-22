@@ -1,70 +1,114 @@
 #!/usr/bin/env bash
+# demo_delete_user.sh — WGU D796 RQN1 Task 1 (B5 demo)
+# Demonstrates:
+# 1) Run delete_user.sh without args (shows error)
+# 2) Run delete_user.sh with valid args (username)
+# 3) Attempt to switch to deleted user (should fail)
+#
+# Critical: Forces the demo to use the PROJECT version (./bin/delete_user.sh),
+# not some other copy in /usr/local/bin.
 
-# Use strict mode by default so errors are visible during the demo.
-# This script temporarily disables `-e` around intentional failures.
 set -euo pipefail
 
-# I resolve the repo root so I can find the local bin directory reliably.
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-HOME_BIN="${HOME}/bin"
+err() {
+  echo "Error: $*" >&2
+  exit 1
+}
 
-# I ensure create_user.sh and delete_user.sh are on PATH, preferring ~/bin for the assignment setup.
-if ! command -v delete_user.sh >/dev/null 2>&1 || ! command -v create_user.sh >/dev/null 2>&1; then
-    if [[ -x "${HOME_BIN}/delete_user.sh" || -x "${HOME_BIN}/create_user.sh" ]]; then
-        PATH="${HOME_BIN}:$PATH"
-    elif [[ -x "${SCRIPT_DIR}/delete_user.sh" || -x "${SCRIPT_DIR}/create_user.sh" ]]; then
-        PATH="${SCRIPT_DIR}:$PATH"
-    fi
-fi
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+PROJECT_DELETE="${PROJECT_DIR}/bin/delete_user.sh"
+PROJECT_CREATE="${PROJECT_DIR}/bin/create_user.sh"
+
+HOME_DELETE="${HOME}/bin/delete_user.sh"
+HOME_CREATE="${HOME}/bin/create_user.sh"
+
+DEFAULT_PASSWORD="TempPass123!"
+OS="$(uname -s)"
+
+pick_script() {
+  local project_path="$1"
+  local home_path="$2"
+  local name="$3"
+
+  if [[ -x "$project_path" ]]; then
+    echo "$project_path"
+    return 0
+  fi
+  if [[ -x "$home_path" ]]; then
+    echo "$home_path"
+    return 0
+  fi
+  if command -v "$name" >/dev/null 2>&1; then
+    command -v "$name"
+    return 0
+  fi
+  return 1
+}
+
+DELETE_SCRIPT="$(pick_script "$PROJECT_DELETE" "$HOME_DELETE" "delete_user.sh" || true)"
+CREATE_SCRIPT="$(pick_script "$PROJECT_CREATE" "$HOME_CREATE" "create_user.sh" || true)"
+
+[[ -n "$DELETE_SCRIPT" ]] || err "Could not find delete_user.sh in ./bin, ~/bin, or PATH"
+[[ -n "$CREATE_SCRIPT" ]] || err "Could not find create_user.sh in ./bin, ~/bin, or PATH"
 
 echo "Demo: delete_user.sh requirements"
-echo "Detected OS: $(uname -s)"
+echo "Detected OS: ${OS}"
 echo
 
-echo "1) Run script without arguments (should error):"
-# Allow the next command to fail without exiting this demo script.
+echo "Using delete_user.sh at:"
+echo "  ${DELETE_SCRIPT}"
+echo "Using create_user.sh at:"
+echo "  ${CREATE_SCRIPT}"
+echo
+
+echo "type -a delete_user.sh (for proof of PATH conflicts):"
+type -a delete_user.sh 2>/dev/null || true
+echo
+echo "type -a create_user.sh (for proof of PATH conflicts):"
+type -a create_user.sh 2>/dev/null || true
+echo
+
+echo "1) Run delete script without arguments (should error):"
 set +e
-delete_user.sh
+"$DELETE_SCRIPT"
 status=$?
-# Re-enable \"exit on error\" for the rest of the demo.
 set -e
 echo "Exit status: $status"
 echo
 
-# Allow passing a username as $1; otherwise generate one using the current epoch seconds.
-# ${1:-} expands to $1 if set, otherwise empty string.
 demo_username="${1:-}"
 if [[ -z "$demo_username" ]]; then
-    demo_username="demo_user_$(date +%s)"
-    echo "No username provided. Creating a temporary user to delete: $demo_username"
-    echo "You will be prompted for a password to create the user."
-    echo
-    create_user.sh "$demo_username"
-    echo
+  demo_username="demo_user_$(date +%s)"
+  echo "No username provided. Creating a temporary user to delete: $demo_username"
+  echo "Assigned password: $DEFAULT_PASSWORD"
+  echo
+  "$CREATE_SCRIPT" "$demo_username" "$DEFAULT_PASSWORD"
+  echo
 fi
 
-# If a username was provided, verify it exists before attempting deletion.
-if ! id -u "$demo_username" >/dev/null 2>&1; then
-    echo "User $demo_username does not exist."
-    echo "Create it with create_user.sh before running this demo, or rerun with a valid username."
-    exit 1
-fi
-
-echo "2) Run script with valid arguments (username):"
+echo "2) Run delete script with valid arguments (username):"
 echo "   Username: $demo_username"
 echo "   You will be prompted to confirm deletion."
 echo
-delete_user.sh "$demo_username"
+"$DELETE_SCRIPT" "$demo_username"
 echo
 
 echo "3) Attempt to switch to the deleted user (should fail):"
-# Allow the next command to fail without exiting this demo script.
-set +e
-su - "$demo_username" -c "whoami"
-status=$?
-set -e
-if [[ $status -eq 0 ]]; then
-    echo "Unexpected: switch succeeded (user may not have been deleted)."
+if [[ "$OS" == "Darwin" ]]; then
+  set +e
+  sudo -iu "$demo_username" whoami >/dev/null 2>&1
+  status=$?
+  set -e
 else
-    echo "As expected, switching to $demo_username failed."
+  set +e
+  su - "$demo_username" -c "whoami" >/dev/null 2>&1
+  status=$?
+  set -e
+fi
+
+if [[ $status -eq 0 ]]; then
+  echo "Unexpected: switch succeeded (user may not have been deleted)."
+else
+  echo "As expected, switching to $demo_username failed."
 fi
