@@ -1,31 +1,26 @@
 #!/usr/bin/env bash
 # setup_shell_env.sh — WGU D796 RQN1 Task 1 (Section C)
 #
-# Rubric-safe + evaluator-proof:
-# - Creates a bin directory inside the PROJECT folder: ./bin
-# - Ensures create_user.sh and delete_user.sh exist in ./bin (project deliverable)
-# - Also installs them into ~/bin so they can run from ANY directory
-# - Forces ~/bin to be FIRST in PATH (so it resolves to ~/bin, not /usr/local/bin)
-# - Sets "$" prompt with different colors
-# - Sources aliases from ~/.bash_aliases
-# - Ensures login shells source ~/.bashrc (macOS-safe)
+# a1: Create and populate a project-local `./bin` directory (deliverable visibility).
+# a2: Install the same scripts into `~/bin` for PATH-based execution from any working directory.
+# a3: Ensure `~/bin` is first in PATH to avoid conflicts with other installed copies.
+# a4: Configure a colored `$` prompt and load aliases from `~/.bash_aliases`.
+# a5: Ensure login shells source `~/.bashrc` (macOS-safe).
 
-set -euo pipefail
+set -euo pipefail  # a6: Stop on errors, unset variables, and pipeline failures.
 
+# f1: err — Print an error message to stderr and exit non-zero.
 err() {
   echo "Error: $*" >&2
   exit 1
 }
 
+# f2: require_cmd — Verify a required command exists on PATH.
 require_cmd() {
   command -v "$1" >/dev/null 2>&1 || err "Required command not found: $1"
 }
 
-# Find a script in:
-# 1) project root
-# 2) project ./bin
-# 3) ~/bin
-# 4) PATH
+# f3: find_script — Locate a script by searching the project root, project `./bin`, `~/bin`, then PATH.
 find_script() {
   local name="$1"
   local project_dir="$2"
@@ -53,14 +48,16 @@ find_script() {
   return 1
 }
 
+# a7: Validate required external commands used by this setup script.
 for cmd in uname cp chmod mkdir grep cat tr printf sed nl; do
   require_cmd "$cmd"
 done
 
+# a8: Resolve the absolute project directory from the location of this script.
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-PROJECT_BIN="$PROJECT_DIR/bin"   # <-- bin in your PROJECT folder (what you wanted)
-HOME_BIN="$HOME/bin"             # <-- bin in your HOME for PATH execution (rubric-safe)
+PROJECT_BIN="$PROJECT_DIR/bin"  # a9: Project-local bin directory (./bin).
+HOME_BIN="$HOME/bin"            # a10: Home bin directory for PATH execution.
 
 ALIAS_SRC="$PROJECT_DIR/bash_aliases"
 ALIAS_DEST="$HOME/.bash_aliases"
@@ -68,18 +65,18 @@ BASHRC="$HOME/.bashrc"
 BASH_PROFILE="$HOME/.bash_profile"
 MARKER="# Added by setup_shell_env.sh (WGU D796 RQN1)"
 
-# 1) Create project bin + home bin
+# a11: Create the project bin and home bin directories (idempotent).
 mkdir -p "$PROJECT_BIN"
 mkdir -p "$HOME_BIN"
 
-# 2) Locate scripts somewhere
+# a12: Locate source copies of the deliverable scripts.
 create_src="$(find_script create_user.sh "$PROJECT_DIR" || true)"
 delete_src="$(find_script delete_user.sh "$PROJECT_DIR" || true)"
 
 [[ -n "$create_src" ]] || err "create_user.sh not found (expected in project root, project bin, ~/bin, or PATH)"
 [[ -n "$delete_src" ]] || err "delete_user.sh not found (expected in project root, project bin, ~/bin, or PATH)"
 
-# 3) Copy scripts into PROJECT ./bin (deliverable visibility)
+# a13: Copy scripts into the project `./bin` directory (deliverable visibility).
 proj_create="$PROJECT_BIN/create_user.sh"
 proj_delete="$PROJECT_BIN/delete_user.sh"
 
@@ -91,23 +88,23 @@ if [[ "$delete_src" != "$proj_delete" ]]; then
 fi
 chmod +x "$proj_create" "$proj_delete"
 
-# 4) Copy scripts into ~/bin (so they run from anywhere via PATH)
+# a14: Copy scripts into `~/bin` for PATH-based execution.
 home_create="$HOME_BIN/create_user.sh"
 home_delete="$HOME_BIN/delete_user.sh"
 
-# Prefer the project ./bin versions as the source-of-truth
+# a15: Prefer the project `./bin` versions as the source of truth for `~/bin`.
 cp -f "$proj_create" "$home_create"
 cp -f "$proj_delete" "$home_delete"
 chmod +x "$home_create" "$home_delete"
 
-# 5) Install aliases file
+# a16: Install the project alias file into `~/.bash_aliases`.
 [[ -f "$ALIAS_SRC" ]] || err "bash_aliases file missing in project folder: $ALIAS_SRC"
 cp -f "$ALIAS_SRC" "$ALIAS_DEST"
 
-# 6) Ensure ~/.bashrc exists
+# a17: Ensure `~/.bashrc` exists before attempting to append configuration.
 touch "$BASHRC"
 
-# 7) Append config once (C1/C2/C4b)
+# a18: Append configuration once (C1/C2/C4b) using a marker to keep the operation idempotent.
 if ! grep -qF "$MARKER" "$BASHRC"; then
   cat <<'EOF' >>"$BASHRC"
 
@@ -116,7 +113,7 @@ if ! grep -qF "$MARKER" "$BASHRC"; then
 # C1: "$" prompt with different colors
 export PS1="\[\e[1;32m\]\$\[\e[0;36m\] "
 
-# Reset color before command output
+# C1a: Reset color before command output
 export PROMPT_COMMAND='echo -ne "\e[0m"'
 
 # C2: Load aliases from separate file
@@ -132,7 +129,7 @@ esac
 EOF
 fi
 
-# 8) macOS login shell fix
+# a19: Ensure login shells source `~/.bashrc` via `~/.bash_profile` (macOS-safe).
 if [[ -f "$BASH_PROFILE" ]]; then
   if ! grep -q 'source "$HOME/.bashrc"' "$BASH_PROFILE" && ! grep -q 'source ~/.bashrc' "$BASH_PROFILE"; then
     cat <<'EOF' >>"$BASH_PROFILE"
@@ -148,7 +145,7 @@ else
 EOF
 fi
 
-# 9) Apply & verify
+# a20: Apply the updated shell config and print verification output.
 echo "Applying changes with: source $BASHRC"
 # shellcheck disable=SC1090
 source "$BASHRC"

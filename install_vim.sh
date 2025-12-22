@@ -1,23 +1,26 @@
 #!/usr/bin/env bash
 
-# I use strict mode so missing commands or failed installs stop immediately.
-set -euo pipefail
+# a1: Install `vim` using the first supported Linux package manager detected on PATH.
+set -euo pipefail  # a2: Stop on errors, unset variables, and pipeline failures.
 
+# f1: err — Print an error message to stderr and exit non-zero.
 err() {
     echo "Error: $*" >&2
     exit 1
 }
 
+# a3: Fast-path exit when vim is already installed.
 if command -v vim >/dev/null 2>&1; then
     echo "Vim is already installed"
     exit 0
 fi
 
+# a4: Guardrail: this installer targets Linux package managers only.
 if [[ "$(uname -s)" != "Linux" ]]; then
     err "This script targets Linux package managers (apt/dnf/yum/pacman/zypper)."
 fi
 
-# I pick the first available package manager to install vim.
+# a5: Select the first available package manager and install the `vim` package.
 if command -v apt-get >/dev/null 2>&1; then
     sudo apt-get update
     sudo apt-get install -y vim

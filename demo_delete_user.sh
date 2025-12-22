@@ -1,20 +1,19 @@
 #!/usr/bin/env bash
 # demo_delete_user.sh — WGU D796 RQN1 Task 1 (B5 demo)
-# Demonstrates:
-# 1) Run delete_user.sh without args (shows error)
-# 2) Run delete_user.sh with valid args (username)
-# 3) Attempt to switch to deleted user (should fail)
 #
-# Critical: Forces the demo to use the PROJECT version (./bin/delete_user.sh),
-# not some other copy in /usr/local/bin.
+# a1: Demonstrate `delete_user.sh` behavior and collect rubric evidence.
+# a2: Prefer the project copy in `./bin` to avoid PATH conflicts with other installations.
+# a3: Run three scenarios: missing args, valid deletion, and a failed switch to the deleted user.
 
-set -euo pipefail
+set -euo pipefail  # a4: Stop on errors, unset variables, and pipeline failures.
 
+# f1: err — Print an error message to stderr and exit non-zero.
 err() {
   echo "Error: $*" >&2
   exit 1
 }
 
+# a5: Resolve absolute project directory and expected script locations.
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 PROJECT_DELETE="${PROJECT_DIR}/bin/delete_user.sh"
@@ -26,6 +25,7 @@ HOME_CREATE="${HOME}/bin/create_user.sh"
 DEFAULT_PASSWORD="TempPass123!"
 OS="$(uname -s)"
 
+# f2: pick_script — Select a script path with strict priority: project `./bin`, `~/bin`, then PATH.
 pick_script() {
   local project_path="$1"
   local home_path="$2"
@@ -46,12 +46,14 @@ pick_script() {
   return 1
 }
 
+# a6: Select the intended script paths using the priority order defined above.
 DELETE_SCRIPT="$(pick_script "$PROJECT_DELETE" "$HOME_DELETE" "delete_user.sh" || true)"
 CREATE_SCRIPT="$(pick_script "$PROJECT_CREATE" "$HOME_CREATE" "create_user.sh" || true)"
 
 [[ -n "$DELETE_SCRIPT" ]] || err "Could not find delete_user.sh in ./bin, ~/bin, or PATH"
 [[ -n "$CREATE_SCRIPT" ]] || err "Could not find create_user.sh in ./bin, ~/bin, or PATH"
 
+# a7: Print environment detection and script resolution evidence (PATH conflict proof).
 echo "Demo: delete_user.sh requirements"
 echo "Detected OS: ${OS}"
 echo
@@ -69,6 +71,7 @@ echo "type -a create_user.sh (for proof of PATH conflicts):"
 type -a create_user.sh 2>/dev/null || true
 echo
 
+# a8: Scenario 1 — run without arguments to demonstrate usage/error handling.
 echo "1) Run delete script without arguments (should error):"
 set +e
 "$DELETE_SCRIPT"
@@ -77,6 +80,7 @@ set -e
 echo "Exit status: $status"
 echo
 
+# a9: When no username arg is provided, create a temporary user to demonstrate deletion.
 demo_username="${1:-}"
 if [[ -z "$demo_username" ]]; then
   demo_username="demo_user_$(date +%s)"
@@ -87,13 +91,15 @@ if [[ -z "$demo_username" ]]; then
   echo
 fi
 
+# a10: Scenario 2 — run with a valid username to delete the account (confirmation prompt expected).
 echo "2) Run delete script with valid arguments (username):"
 echo "   Username: $demo_username"
-echo "   You will be prompted to confirm deletion."
+echo "   A confirmation prompt is expected before deletion."
 echo
 "$DELETE_SCRIPT" "$demo_username"
 echo
 
+# a11: Scenario 3 — attempt to switch to the deleted user; success indicates deletion did not occur.
 echo "3) Attempt to switch to the deleted user (should fail):"
 if [[ "$OS" == "Darwin" ]]; then
   set +e
@@ -107,6 +113,7 @@ else
   set -e
 fi
 
+# a12: Emit a final pass/fail message based on whether the switch succeeded.
 if [[ $status -eq 0 ]]; then
   echo "Unexpected: switch succeeded (user may not have been deleted)."
 else
