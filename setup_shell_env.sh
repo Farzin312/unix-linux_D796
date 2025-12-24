@@ -55,6 +55,7 @@ done
 
 # a8: Resolve the absolute project directory from the location of this script.
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+OS="$(uname -s)"  # a8a: Cache OS name for login-shell config decisions.
 
 PROJECT_BIN="$PROJECT_DIR/bin"  # a9: Project-local bin directory (./bin).
 HOME_BIN="$HOME/bin"            # a10: Home bin directory for PATH execution.
@@ -63,6 +64,7 @@ ALIAS_SRC="$PROJECT_DIR/bash_aliases"
 ALIAS_DEST="$HOME/.bash_aliases"
 BASHRC="$HOME/.bashrc"
 BASH_PROFILE="$HOME/.bash_profile"
+PROFILE="$HOME/.profile"
 MARKER="# Added by setup_shell_env.sh (WGU D796 RQN1)"
 
 # a11: Create the project bin and home bin directories (idempotent).
@@ -129,20 +131,46 @@ esac
 EOF
 fi
 
-# a19: Ensure login shells source `~/.bashrc` via `~/.bash_profile` (macOS-safe).
-if [[ -f "$BASH_PROFILE" ]]; then
-  if ! grep -q 'source "$HOME/.bashrc"' "$BASH_PROFILE" && ! grep -q 'source ~/.bashrc' "$BASH_PROFILE"; then
-    cat <<'EOF' >>"$BASH_PROFILE"
+# a19: Ensure login shells source `~/.bashrc`.
+# a19a: macOS uses .bash_profile; Linux typically uses .profile (avoid overriding it).
+if [[ "$OS" == "Darwin" ]]; then
+  if [[ -f "$BASH_PROFILE" ]]; then
+    if ! grep -q 'source "$HOME/.bashrc"' "$BASH_PROFILE" && ! grep -q 'source ~/.bashrc' "$BASH_PROFILE"; then
+      cat <<'EOF' >>"$BASH_PROFILE"
 
+# Added by setup_shell_env.sh (WGU D796 RQN1)
+[ -f "$HOME/.bashrc" ] && source "$HOME/.bashrc"
+EOF
+    fi
+  else
+    cat <<'EOF' >"$BASH_PROFILE"
 # Added by setup_shell_env.sh (WGU D796 RQN1)
 [ -f "$HOME/.bashrc" ] && source "$HOME/.bashrc"
 EOF
   fi
 else
-  cat <<'EOF' >"$BASH_PROFILE"
+  if [[ -f "$BASH_PROFILE" ]]; then
+    if ! grep -q 'source "$HOME/.bashrc"' "$BASH_PROFILE" && ! grep -q 'source ~/.bashrc' "$BASH_PROFILE"; then
+      cat <<'EOF' >>"$BASH_PROFILE"
+
 # Added by setup_shell_env.sh (WGU D796 RQN1)
 [ -f "$HOME/.bashrc" ] && source "$HOME/.bashrc"
 EOF
+    fi
+  elif [[ -f "$PROFILE" ]]; then
+    if ! grep -q '\.bashrc' "$PROFILE"; then
+      cat <<'EOF' >>"$PROFILE"
+
+# Added by setup_shell_env.sh (WGU D796 RQN1)
+[ -f "$HOME/.bashrc" ] && . "$HOME/.bashrc"
+EOF
+    fi
+  else
+    cat <<'EOF' >"$PROFILE"
+# Added by setup_shell_env.sh (WGU D796 RQN1)
+[ -f "$HOME/.bashrc" ] && . "$HOME/.bashrc"
+EOF
+  fi
 fi
 
 # a20: Apply the updated shell config and print verification output.
@@ -150,6 +178,19 @@ echo "Applying changes with: source $BASHRC"
 # shellcheck disable=SC1090
 source "$BASHRC"
 echo "source exit status: 0"
+echo
+
+echo "Verification: PS1 (prompt) value:"
+printf '%s\n' "$PS1"
+echo
+
+echo "Verification: key aliases:"
+alias lrt 2>/dev/null || true
+alias la 2>/dev/null || true
+alias cls 2>/dev/null || true
+alias desktop 2>/dev/null || true
+alias download 2>/dev/null || true
+alias documents 2>/dev/null || true
 echo
 
 echo "Verification: project bin directory exists and contains scripts:"

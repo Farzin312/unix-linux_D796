@@ -78,7 +78,31 @@ echo
 "$CREATE_SCRIPT" "$demo_username" "$DEFAULT_PASSWORD"
 echo
 
-# a11: Scenario 3 — provide OS-specific commands to prove the new user can be switched into.
+# a11: Linux verification — show group evidence and password-change status.
+if [[ "$OS" == "Linux" ]]; then
+  echo "Verification (Linux):"
+  echo "- Group dev_group:"
+  if command -v getent >/dev/null 2>&1; then
+    getent group dev_group || true
+  elif [[ -r /etc/group ]]; then
+    grep -E "^dev_group:" /etc/group || true
+  else
+    echo "  (Unable to read group database)"
+  fi
+  echo
+
+  if command -v chage >/dev/null 2>&1; then
+    echo "- Password change status (chage -l $demo_username):"
+    chage -l "$demo_username" || true
+    echo
+  elif command -v passwd >/dev/null 2>&1; then
+    echo "- Password status (passwd -S $demo_username):"
+    passwd -S "$demo_username" || true
+    echo
+  fi
+fi
+
+# a12: Scenario 3 — provide OS-specific commands to prove the new user can be switched into.
 if [[ "$OS" == "Darwin" ]]; then
   echo "3) Switch to the new user (macOS):"
   echo "   Run the following manually in the demo recording:"
@@ -88,14 +112,27 @@ if [[ "$OS" == "Darwin" ]]; then
   echo "Note: macOS 'force password change' enforcement may vary by policy."
 else
   echo "3) Switch to the new user (Linux):"
-  echo "   Expected: system forces password change on first login (chage -d 0 / passwd -e)."
-  echo
   if ! command -v su >/dev/null 2>&1; then
     err "su not found; cannot switch users on this system."
   fi
-  echo "Run manually in the demo recording:"
-  echo "   su - $demo_username"
-  echo "   (Enter password: $DEFAULT_PASSWORD)"
-  echo "After login, exit back:"
-  echo "   exit"
+  echo "   Enter the assigned password when prompted; you should be forced to change it."
+  echo
+  if [[ -t 0 ]]; then
+    echo "Opening a login shell for ${demo_username}..."
+    set +e
+    su - "$demo_username"
+    switch_status=$?
+    set -e
+    if [[ $switch_status -ne 0 ]]; then
+      echo "Switch to ${demo_username} exited with status: $switch_status"
+    else
+      echo "Exited from ${demo_username} login shell."
+    fi
+  else
+    echo "Non-interactive session detected. Run manually:"
+    echo "   su - $demo_username"
+    echo "   (Enter password: $DEFAULT_PASSWORD)"
+    echo "After login, exit back:"
+    echo "   exit"
+  fi
 fi
