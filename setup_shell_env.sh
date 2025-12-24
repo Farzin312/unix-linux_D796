@@ -181,7 +181,11 @@ echo "source exit status: 0"
 echo
 
 echo "Verification: PS1 (prompt) value:"
-printf '%s\n' "$PS1"
+if [[ -n "${PS1-}" ]]; then
+  printf '%s\n' "$PS1"
+else
+  echo "(PS1 not set in non-interactive shell)"
+fi
 echo
 
 echo "Verification: key aliases:"
