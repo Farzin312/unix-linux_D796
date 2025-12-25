@@ -77,52 +77,20 @@ group_exists() {
   [[ -r /etc/group ]] && grep -qE "^${group_name}:" /etc/group
 }
 
-# f10: prompt_password — Prompt twice and return a confirmed password (no echo).
-prompt_password() {
-  local username="$1"
-  local pass1 pass2
-  read -r -s -p "Enter password for ${username}: " pass1
-  echo
-  read -r -s -p "Confirm password: " pass2
-  echo
-  [[ -n "$pass1" ]] || err "Password must not be empty"
-  [[ "$pass1" == "$pass2" ]] || err "Passwords do not match"
-  printf '%s' "$pass1"
-}
-
-# f11: set_password — Assign a password with retries for policy rejection.
+# f10: set_password — Assign a password or exit with a clear policy error.
 set_password() {
   local username="$1"
   local password="$2"
-  local attempts=0
-  local max_attempts=3
+  [[ -n "$password" ]] || err "Password must not be empty"
 
-  while true; do
-    if [[ "${EUID}" -ne 0 ]]; then
-      if printf '%s:%s\n' "$username" "$password" | sudo chpasswd; then
-        return 0
-      fi
-    else
-      if printf '%s:%s\n' "$username" "$password" | chpasswd; then
-        return 0
-      fi
-    fi
-
-    attempts=$((attempts + 1))
-    if (( attempts >= max_attempts )); then
-      err "Password rejected by policy after ${attempts} attempts"
-    fi
-
-    if [[ -t 0 ]]; then
-      echo "Password rejected by policy; use a stronger password (min 8 chars, mixed case, digit)." >&2
-      password="$(prompt_password "$username")"
-    else
-      err "Password rejected by policy and no interactive input is available"
-    fi
-  done
+  if [[ "${EUID}" -ne 0 ]]; then
+    printf '%s:%s\n' "$username" "$password" | sudo chpasswd || err "Password rejected by policy; pass a stronger password argument"
+  else
+    printf '%s:%s\n' "$username" "$password" | chpasswd || err "Password rejected by policy; pass a stronger password argument"
+  fi
 }
 
-# f12: force_password_change — Require a password change at next login.
+# f11: force_password_change — Require a password change at next login.
 force_password_change() {
   local username="$1"
   if run_privileged chage -d 0 "$username" >/dev/null 2>&1; then
@@ -132,21 +100,24 @@ force_password_change() {
   run_privileged passwd -e "$username" >/dev/null 2>&1 || err "Failed to force password change for user ${username}"
 }
 
-# f13: ensure_group — Ensure the dev_group group exists before user creation.
+# f12: ensure_group — Ensure the dev_group group exists before user creation.
 ensure_group() {
   local group_name="$1"
   if ! group_exists "$group_name"; then
     run_privileged groupadd "$group_name" || err "Failed to create group ${group_name}"
+    echo "Group ${group_name} created."
+  else
+    echo "Group ${group_name} already exists."
   fi
 }
 
-# f14: show_passwd — Display /etc/passwd as required verification output.
+# f13: show_passwd — Display /etc/passwd as required verification output.
 show_passwd() {
   echo "---- /etc/passwd ----"
   cat /etc/passwd
 }
 
-# f15: switch_to_user — Attempt a login shell for the new user to show the forced password change.
+# f14: switch_to_user — Attempt a login shell for the new user to show the forced password change.
 switch_to_user() {
   local username="$1"
 
@@ -170,10 +141,11 @@ switch_to_user() {
   fi
 }
 
-# f16: create_user — Validate inputs, create the account, and emit verification output.
+# f15: create_user — Validate inputs, create the account, and emit verification output.
 create_user() {
   local username="$1"
   local password="$2"
+  local password_source="$3"
   local group_name="dev_group"
 
   [[ -n "$username" && -n "$password" ]] || err "Username and password must be provided"
@@ -188,6 +160,7 @@ create_user() {
   ensure_group "$group_name"
 
   run_privileged useradd -m -g "$group_name" "$username" || err "Failed to create user ${username}"
+  echo "Assigned ${password_source} password for ${username}: ${password}"
   set_password "$username" "$password"
   force_password_change "$username"
 
@@ -200,7 +173,7 @@ create_user() {
   fi
 }
 
-# f17: demo_mode — Execute the rubric scenarios without external demo scripts.
+# f16: demo_mode — Execute the rubric scenarios without external demo scripts.
 demo_mode() {
   local demo_username="${1:-}"
   local demo_password="${2:-TempPass123!}"
@@ -260,10 +233,13 @@ case "$1" in
 
 username="$1"
 password="${2:-}"
+password_source="provided"
 
+DEFAULT_PASSWORD="TempPass123!"
 if [[ -z "$password" ]]; then
-  password="$(prompt_password "$username")"
+  password="$DEFAULT_PASSWORD"
+  password_source="default"
 fi
 
-create_user "$username" "$password"
+create_user "$username" "$password" "$password_source"
 exit 0

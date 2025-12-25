@@ -9,6 +9,12 @@
 
 set -euo pipefail  # a6: Stop on errors, unset variables, and pipeline failures.
 
+# a6a: Capture optional demo flag to run valid-argument examples from /tmp.
+RUN_VALID_DEMO=0
+if [[ "${1:-}" == "--demo-valid" ]]; then
+  RUN_VALID_DEMO=1
+fi
+
 # f1: err — Print an error message to stderr and exit non-zero.
 err() {
   echo "Error: $*" >&2
@@ -208,6 +214,25 @@ set +e
   echo "delete_user.sh exit status: $?"
 )
 set -e
+
+if [[ "$RUN_VALID_DEMO" -eq 1 ]]; then
+  echo
+  echo "Demonstration: run scripts from /tmp (valid args):"
+  demo_user="demo_user_$(date +%s)"
+  demo_pass="TempPass123!"
+  set +e
+  (
+    cd /tmp || exit 1
+    echo "create_user.sh $demo_user (password preset)"
+    SKIP_SWITCH=1 create_user.sh "$demo_user" "$demo_pass"
+    echo "create_user.sh exit status: $?"
+    echo
+    echo "delete_user.sh $demo_user (confirmation required)"
+    delete_user.sh "$demo_user"
+    echo "delete_user.sh exit status: $?"
+  )
+  set -e
+fi
 
 echo
 echo "Done — project ./bin created, scripts installed to project and ~/bin, PATH is set."
