@@ -21,16 +21,11 @@ ensure_root_or_sudo() {
     fi
 }
 
-# f4: fileSize — Return a file size in bytes (Linux stat or macOS stat fallback).
+# f4: fileSize — Return a file size in bytes using Linux stat.
 fileSize() {
     local file="$1"
     [[ -f "$file" ]] || err "File not found: $file"
-
-    if stat -c%s "$file" >/dev/null 2>&1; then
-        stat -c%s "$file"
-    else
-        stat -f%z "$file"
-    fi
+    stat -c%s "$file"
 }
 
 # a3: Validate required tooling exists before attempting archive creation.

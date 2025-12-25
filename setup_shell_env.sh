@@ -5,7 +5,7 @@
 # a2: Install the same scripts into `~/bin` for PATH-based execution from any working directory.
 # a3: Ensure `~/bin` is first in PATH to avoid conflicts with other installed copies.
 # a4: Configure a colored `$` prompt and load aliases from `~/.bash_aliases`.
-# a5: Ensure login shells source `~/.bashrc` (macOS-safe).
+# a5: Ensure login shells source `~/.bashrc` on Linux.
 
 set -euo pipefail  # a6: Stop on errors, unset variables, and pipeline failures.
 
@@ -55,7 +55,6 @@ done
 
 # a8: Resolve the absolute project directory from the location of this script.
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-OS="$(uname -s)"  # a8a: Cache OS name for login-shell config decisions.
 
 PROJECT_BIN="$PROJECT_DIR/bin"  # a9: Project-local bin directory (./bin).
 HOME_BIN="$HOME/bin"            # a10: Home bin directory for PATH execution.
@@ -132,45 +131,28 @@ EOF
 fi
 
 # a19: Ensure login shells source `~/.bashrc`.
-# a19a: macOS uses .bash_profile; Linux typically uses .profile (avoid overriding it).
-if [[ "$OS" == "Darwin" ]]; then
-  if [[ -f "$BASH_PROFILE" ]]; then
-    if ! grep -q 'source "$HOME/.bashrc"' "$BASH_PROFILE" && ! grep -q 'source ~/.bashrc' "$BASH_PROFILE"; then
-      cat <<'EOF' >>"$BASH_PROFILE"
+# a19a: Prefer .bash_profile when present; otherwise update .profile.
+if [[ -f "$BASH_PROFILE" ]]; then
+  if ! grep -q 'source "$HOME/.bashrc"' "$BASH_PROFILE" && ! grep -q 'source ~/.bashrc' "$BASH_PROFILE"; then
+    cat <<'EOF' >>"$BASH_PROFILE"
 
 # Added by setup_shell_env.sh (WGU D796 RQN1)
 [ -f "$HOME/.bashrc" ] && source "$HOME/.bashrc"
 EOF
-    fi
-  else
-    cat <<'EOF' >"$BASH_PROFILE"
+  fi
+elif [[ -f "$PROFILE" ]]; then
+  if ! grep -q '\.bashrc' "$PROFILE"; then
+    cat <<'EOF' >>"$PROFILE"
+
 # Added by setup_shell_env.sh (WGU D796 RQN1)
-[ -f "$HOME/.bashrc" ] && source "$HOME/.bashrc"
+[ -f "$HOME/.bashrc" ] && . "$HOME/.bashrc"
 EOF
   fi
 else
-  if [[ -f "$BASH_PROFILE" ]]; then
-    if ! grep -q 'source "$HOME/.bashrc"' "$BASH_PROFILE" && ! grep -q 'source ~/.bashrc' "$BASH_PROFILE"; then
-      cat <<'EOF' >>"$BASH_PROFILE"
-
-# Added by setup_shell_env.sh (WGU D796 RQN1)
-[ -f "$HOME/.bashrc" ] && source "$HOME/.bashrc"
-EOF
-    fi
-  elif [[ -f "$PROFILE" ]]; then
-    if ! grep -q '\.bashrc' "$PROFILE"; then
-      cat <<'EOF' >>"$PROFILE"
-
+  cat <<'EOF' >"$PROFILE"
 # Added by setup_shell_env.sh (WGU D796 RQN1)
 [ -f "$HOME/.bashrc" ] && . "$HOME/.bashrc"
 EOF
-    fi
-  else
-    cat <<'EOF' >"$PROFILE"
-# Added by setup_shell_env.sh (WGU D796 RQN1)
-[ -f "$HOME/.bashrc" ] && . "$HOME/.bashrc"
-EOF
-  fi
 fi
 
 # a20: Apply the updated shell config and print verification output.
